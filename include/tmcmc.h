@@ -19,7 +19,8 @@
 const double SMALL_LPRIOR = -1.0e10;
 const double Pi = 3.14159265358979323846;
 const double BETA_MAX = 1.0;
-const int MAX_TMCMC_ITER = 1e3;
+const double COV_ERROR = 1.0E-4;
+const int MAX_TMCMC_ITER = 1e5;
 
 typedef std::vector<double>               RealVector;
 typedef std::vector<std::vector<double> > RealMatrix;
@@ -78,9 +79,7 @@ public:
         case 'G':
           log_prior += -0.5*log(2.0*Pi) - log(betas[j]) - 0.5*pow((x[j]-alphas[j])/betas[j],2.0);
           break;
-        case 'J':
-          log_prior += log(sqrt(2/pow(x[j],2)));
-          break;
+
       }
     }
     return log_prior;

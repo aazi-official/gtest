@@ -1,0 +1,13 @@
+Running on node(s): compute-0-12
+Number of tasks: 4
+Working directory: /home/zzhang88/gtest
+--------------------------------------------------------------------------
+mpirun was unable to launch the specified application as it could not access
+or execute an executable:
+
+Executable: ./main
+Node: compute-0-12
+
+while attempting to start process rank 0.
+--------------------------------------------------------------------------
+4 total processes failed to start
