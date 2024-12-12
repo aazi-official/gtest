@@ -5,7 +5,7 @@
 #include <string>
 #include "tmcmc.h"
 
-// ×Ô¶¨Òå¶ÔÊıËÆÈ»º¯Êı
+// è‡ªå®šä¹‰å¯¹æ•°ä¼¼ç„¶å‡½æ•°
 class LogLikelihood : public LogDensity {
 public:
     LogLikelihood() : LogDensity() {};
@@ -33,89 +33,45 @@ int main(int argc, char *argv[]) {
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &np);
     ierr = MPI_Comm_rank(MPI_COMM_WORLD, &pid);
 
-    const int ndim = 4;         
-    const int nsamps = 5000;    
-    const int write_flag = 1;   
+    const int ndim = 4;          // 4ç»´é—®é¢˜
+    const int nsamps = 500;      // é‡‡æ ·ç‚¹æ•°
+    const int write_flag = 0;    // ä¸å†™å…¥ä¸­é—´ç»“æœ
 
-    // ¹Ì¶¨µÄ CoV Öµ
-    std::vector<double> covValues = {pow(10, -1), pow(10, -0.75), pow(10, -0.5), pow(10, -0.25), 1.0};
+    // å›ºå®šçš„ CoV å€¼
+    double cov = 0.1;  // é€‰å®šå•ä¸ª CoV å€¼
 
-    // ¹Ì¶¨ Proposal ÅäÖÃ
-    std::vector<std::string> proposalConfigPaths = {
-        "./proposal_files/proposal_1",
-        "./proposal_files/proposal_2",
-        "./proposal_files/proposal_3",
-        "./proposal_files/proposal_4",
-        "./proposal_files/proposal_5"
-    };
+    // å›ºå®š Proposal é…ç½®
+    std::string proposalParamsFile = "./proposal_files/proposal_1_params.dat";
+    std::string proposalTypesFile = "./proposal_files/proposal_1_types.dat";
 
-    // ¹Ì¶¨ Prior ÎÄ¼şÂ·¾¶
+    // å›ºå®š Prior æ–‡ä»¶è·¯å¾„
     std::string priorParamsFile = "prior_params.dat";
     std::string priorTypesFile = "prior_types.dat";
 
     LogLikelihood logLikelihood;
 
-    // ´æ´¢½×¶ÎÊı
-    std::vector<std::vector<int>> stages(proposalConfigPaths.size(), std::vector<int>(covValues.size(), 0));
+    if (pid == 0) std::cout << "Running Proposal 1 with CoV=" << cov << "\n";
 
-    // ±éÀú Proposal ºÍ CoV Öµ
-    for (size_t i = 0; i < proposalConfigPaths.size(); i++) {
-        // ¶ÁÈ¡ Proposal ÎÄ¼şÂ·¾¶
-        std::string proposalParamsFile = proposalConfigPaths[i] + "_params.dat";
-        std::string proposalTypesFile = proposalConfigPaths[i] + "_types.dat";
+    // è°ƒç”¨ TMCMC
+    double logevid = tmcmc(nsamps, 100 * pid + 4, ndim, cov,
+                           write_flag, pid, np,
+                           priorParamsFile, priorTypesFile, 
+                           proposalParamsFile, proposalTypesFile, 
+                           &logLikelihood);
 
-        for (size_t j = 0; j < covValues.size(); j++) {
-            double cov = covValues[j];
-            if (pid == 0) std::cout << "Running Proposal " << i + 1 << " with CoV=" << cov << "\n";
-
-            // »ñÈ¡µ±Ç°½×¶ÎÊı
-            int initialStageCount = 0;
-            if (pid == 0) {
-                std::string command = "ls samples.dat.* 2>/dev/null | wc -l";
-                FILE *pipe = popen(command.c_str(), "r");
-                if (pipe) {
-                    fscanf(pipe, "%d", &initialStageCount);
-                    pclose(pipe);
-                }
-            }
-
-            // µ÷ÓÃ TMCMC
-            double logevid = tmcmc(nsamps, 100 * pid + 4, ndim, cov,
-                                   write_flag, pid, np,
-                                   priorParamsFile, priorTypesFile, 
-                                   proposalParamsFile, proposalTypesFile, 
-                                   &logLikelihood);
-
-            // ¼ÆËã½×¶ÎÊı
-            if (pid == 0) {
-                int finalStageCount = 0;
-                std::string command = "ls samples.dat.* 2>/dev/null | wc -l";
-                FILE *pipe = popen(command.c_str(), "r");
-                if (pipe) {
-                    fscanf(pipe, "%d", &finalStageCount);
-                    pclose(pipe);
-                }
-                stages[i][j] = finalStageCount - initialStageCount;
-                std::cout << "Proposal " << i + 1 << " with CoV = " << cov
-                          << " completed in " << stages[i][j] << " stages.\n";
-            }
-        }
-    }
-
-    // Êä³ö½×¶ÎÊıµ½ÎÄ¼ş
     if (pid == 0) {
-        std::ofstream outfile("stages_vs_cov.dat");
-        for (size_t i = 0; i < stages.size(); i++) {
-            outfile << "Proposal " << i + 1 << ": ";
-            for (size_t j = 0; j < stages[i].size(); j++) {
-                outfile << stages[i][j] << " ";
-            }
-            outfile << "\n";
-        }
+        std::cout << "Proposal 1 with CoV = " << cov
+                  << " completed. Log Evidence = " << logevid << "\n";
+
+        // è¾“å‡ºç»“æœåˆ°æ–‡ä»¶
+        std::ofstream outfile("result_summary.dat");
+        outfile << "Proposal 1 with CoV = " << cov
+                << " completed. Log Evidence = " << logevid << "\n";
         outfile.close();
     }
 
     MPI_Finalize();
     return 0;
 }
+
 
